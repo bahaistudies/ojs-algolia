@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE locale SYSTEM "../../../../../lib/pkp/dtd/locale.dtd">
+
+<!--
+  * plugins/generic/algolia/locale/en_US/locale.xml
+  *
+  * Copyright (c) 2014-2018 Simon Fraser University
+  * Copyright (c) 2003-2018 John Willinsky
+  * Copyright (c) 2019 Jun Kim / Foster Made, LLC
+  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+  * Localization information: https://pkp.sfu.ca/wiki/index.php?title=Translating_OxS
+  * Localization strings.
+  -->
+
+<locale name="en_US" full_name="U.S. English">
+    <!-- generic info -->
+    <message key="plugins.generic.algolia.displayName">Algolia Search Plugin</message>
+    <message key="plugins.generic.algolia.description">An Algolia plugin to index content from OJS3</message>
+
+    <!-- settings form -->
+    <message key="plugins.generic.algolia.settings.algoliaServerSettings">Settings</message>
+    <message key="plugins.generic.algolia.settings.description"><![CDATA[
+        This plugin indexes content into Algolia
+    ]]></message>
+    <message key="plugins.generic.algolia.settings.adminKey">Admin Key</message>
+    <message key="plugins.generic.algolia.settings.adminKeyInstructions">The Admin API key for the indexing engine</message>
+    <message key="plugins.generic.algolia.settings.adminKeyRequired">Please enter a valid admin key to authenticate to Algolia</message>
+
+    <message key="plugins.generic.algolia.settings.searchOnlyKey">Search Only Key</message>
+    <message key="plugins.generic.algolia.settings.searchOnlyKeyInstructions">Search only key for the indexing engine</message>
+    <message key="plugins.generic.algolia.settings.searchOnlyKeyRequired">Please enter a valid search only key</message>
+
+    <message key="plugins.generic.algolia.settings.appId">App ID</message>
+    <message key="plugins.generic.algolia.settings.appIdInstructions">The app id of your Algolia account</message>
+    <message key="plugins.generic.algolia.settings.appIdRequired">Please enter a valid app id</message>
+
+    <message key="plugins.generic.algolia.settings.index">Index</message>
+    <message key="plugins.generic.algolia.settings.indexInstructions">The name of your Algolia index</message>
+    <message key="plugins.generic.algolia.settings.indexRequired">Please enter a valid index</message>
+
+    <message key="plugins.generic.algolia.settings.indexRebuild">Rebuild index</message>
+    <message key="plugins.generic.algolia.settings.indexRebuild.confirm">Rebuilding the index and/or dictionaries can take a long time. Are you sure you want to proceed?</message>
+    <message key="plugins.generic.algolia.settings.indexRebuildAllJournals">Rebuild index for all journals</message>
+    <message key="plugins.generic.algolia.settings.indexRebuildDescription">Used to reindex all content from either one or all journals.</message>
+    <message key="plugins.generic.algolia.settings.indexRebuildJournal">Rebuild index for journal "{$journalName}"</message>
+    <message key="plugins.generic.algolia.settings.indexAdministration">Index Administration</message>
+</locale>
