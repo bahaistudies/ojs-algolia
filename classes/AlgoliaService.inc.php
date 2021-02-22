@@ -101,8 +101,8 @@ class AlgoliaService {
             return;
         }
 
-        $articleDao = DAORegistry::getDAO('ArticleDAO'); /* @var $articleDao ArticleDAO */
-        $articleDao->updateSetting(
+        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+        $submissionDao->updateSetting(
             $articleId, 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_DIRTY, 'bool'
         );
     }
@@ -119,8 +119,8 @@ class AlgoliaService {
         }
 
         // Retrieve all articles of the journal.
-        $articleDao = DAORegistry::getDAO('ArticleDAO'); /* @var $articleDao ArticleDAO */
-        $articles = $articleDao->getByContextId($journalId);
+        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+        $articles = $submissionDao->getByContextId($journalId);
 
         $publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO'); /* @var $publishedArticleDao PublishedArticleDAO */
 
@@ -153,8 +153,8 @@ class AlgoliaService {
         // Retrieve a batch of "changed" articles.
         import('lib.pkp.classes.db.DBResultRange');
         $range = new DBResultRange($batchSize);
-        $articleDao = DAORegistry::getDAO('ArticleDAO'); /* @var $articleDao ArticleDAO */
-        $changedArticlesIterator = $articleDao->getBySetting(
+        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+        $changedArticlesIterator = $submissionDao->getBySetting(
             'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_DIRTY, $journalId, $range
         );
         unset($range);
@@ -170,7 +170,7 @@ class AlgoliaService {
 
         foreach($changedArticles as $indexedArticle) {
             $indexedArticle->setData('algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN);
-            $articleDao->updateLocaleFields($indexedArticle);
+            $submissionDao->updateLocaleFields($indexedArticle);
             
             $toDelete[] = $this->buildAlgoliaObjectDelete($indexedArticle);
             $toAdd[] = $this->buildAlgoliaObjectAdd($indexedArticle);
@@ -307,8 +307,8 @@ class AlgoliaService {
 
     function buildAlgoliaObjectAdd($article){
         // mark the article as "clean"
-        $articleDao = DAORegistry::getDAO('ArticleDAO'); /* @var $articleDao ArticleDAO */
-        $articleDao->updateSetting(
+        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+        $submissionDao->updateSetting(
             $article->getId(), 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN, 'bool'
         );
 
