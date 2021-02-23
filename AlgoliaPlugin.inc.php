@@ -185,12 +185,15 @@ class AlgoliaPlugin extends GenericPlugin {
      */
     function callbackArticleMetadataChanged($hookName, $params) {
         assert($hookName == 'ArticleSearchIndex::articleMetadataChanged');
-        list($article) = $params; /* @var $article Article */
+        list($submission) = $params; /* @var $submission Article */
 
-        $publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO'); /* @var $publishedArticleDao PublishedArticleDAO */
-        $publishedArticle = $publishedArticleDao->getByArticleId($article->getId());
+        $publishedArticleDao =  $publishedSubmissions = Services::get('submission')
+                                ->getMany(['status' => STATUS_PUBLISHED]); /* @var $publishedArticleDao PublishedArticleDAO */
+        $publishedArticle =     if ($submission->getData('status') === STATUS_PUBLISHED) {
+                                // submission is published
+                                }
         if (is_a($publishedArticle, 'PublishedArticle')) {
-            $this->_algoliaService->markArticleChanged($article->getId());
+            $this->_algoliaService->markArticleChanged($submission->getId());
             $this->_algoliaService->pushChangedArticles(5);
         }
 
@@ -203,7 +206,7 @@ class AlgoliaPlugin extends GenericPlugin {
     function callbackArticleDeleted($hookName, $params) {
         assert($hookName == 'ArticleSearchIndex::articleDeleted');
         list($articleId) = $params;
-        // Deleting an article must always be done synchronously
+        // Deleting an submission$submission must always be done synchronously
         // (even in pull-mode) as we'll no longer have an object
         // to keep our change information.
         $this->_algoliaService->deleteArticleFromIndex($articleId);
@@ -213,7 +216,7 @@ class AlgoliaPlugin extends GenericPlugin {
     /**
      * @see ArticleSearchIndex::articleChangesFinished()
      *
-     * This fires after an article has been published
+     * This fires after an submission$submission has been published
      */
     function callbackArticleChangesFinished($hookName, $params) {
         // In the case of pull-indexing we ignore this call

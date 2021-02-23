@@ -21,14 +21,14 @@
 define('ALGOLIA_INDEXINGSTATE_DIRTY', true);
 define('ALGOLIA_INDEXINGSTATE_CLEAN', false);
 
-// The max. number of articles that can
+// The max. number of Submissions that can
 // be indexed in a single batch.
 define('ALGOLIA_INDEXING_MAX_BATCHSIZE', 2000);
 
 // Number of words to split
 define('ALGOLIA_WORDCOUNT_SPLIT', 250);
 
-import('classes.search.ArticleSearch');
+import('classes.search.SubmissionSearch');
 import('plugins.generic.algolia.classes.AlgoliaEngine');
 import('lib.pkp.classes.config.Config');
 
@@ -91,26 +91,26 @@ class AlgoliaService {
     // Public API
     //
     /**
-     * Mark a single article "changed" so that the indexing
+     * Mark a single Submission "changed" so that the indexing
      * back-end will update it during the next batch update.
-     * @param $articleId Integer
+     * @param $submissionId Integer
      */
-    function markArticleChanged($articleId, $journalId = null) {
-        if(!is_numeric($articleId)) {
+    function markSubmissionChanged($submissionId, $journalId = null) {
+        if(!is_numeric($submissionId)) {
             assert(false);
             return;
         }
 
-        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+        $submissionDao = DAORegistry::getDAO('SubmissionDAO'); /* @var $submissionDao SubmissionDAO */
         $submissionDao->updateSetting(
-            $articleId, 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_DIRTY, 'bool'
+            $submissionId, 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_DIRTY, 'bool'
         );
     }
 
     /**
      * Mark the given journal for re-indexing.
      * @param $journalId integer The ID of the journal to be (re-)indexed.
-     * @return integer The number of articles that have been marked.
+     * @return integer The number of Submissions that have been marked.
      */
     function markJournalChanged($journalId) {
         if (!is_numeric($journalId)) {
@@ -118,62 +118,62 @@ class AlgoliaService {
             return;
         }
 
-        // Retrieve all articles of the journal.
-        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
-        $articles = $submissionDao->getByContextId($journalId);
+        // Retrieve all Submissions of the journal.
+        $submissionDao = DAORegistry::getDAO('SubmissionDAO'); /* @var $submissionDao SubmissionDAO */
+        $Submissions = $submissionDao->getByContextId($journalId);
 
-        $publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO'); /* @var $publishedArticleDao PublishedArticleDAO */
+        $publishedSubmissionDao = DAORegistry::getDAO('PublishedSubmissionDAO'); /* @var $publishedSubmissionDao PublishedSubmissionDAO */
 
-        // Run through the articles and mark them "changed".
-        while($article = $articles->next()) {
-            $publishedArticle = $publishedArticleDao->getByArticleId($article->getId());
-            if (is_a($publishedArticle, 'PublishedArticle')) {
-                if($article->getStatusKey() == "submission.status.published"){
-                    $this->markArticleChanged($publishedArticle->getId(), $journalId);
+        // Run through the Submissions and mark them "changed".
+        while($Submission = $Submissions->next()) {
+            $publishedSubmission = $publishedSubmissionDao->getBySubmissionId($Submission->getId());
+            if (is_a($publishedSubmission, 'PublishedSubmission')) {
+                if($Submission->getStatusKey() == "submission.status.published"){
+                    $this->markSubmissionChanged($publishedSubmission->getId(), $journalId);
                 }
             }
         }
     }
 
     /**
-     * (Re-)indexes all changed articles in Algolia.
+     * (Re-)indexes all changed Submissions in Algolia.
      *
      * This is 'pushing' the content to Algolia.
      *
      * To control memory usage and response time we
-     * index articles in batches. Batches should be as
+     * index Submissions in batches. Batches should be as
      * large as possible to reduce index commit overhead.
      *
-     * @param $batchSize integer The maximum number of articles
+     * @param $batchSize integer The maximum number of Submissions
      *  to be indexed in this run.
      * @param $journalId integer If given, restrains index
      *  updates to the given journal.
      */
-    function pushChangedArticles($batchSize = ALGOLIA_INDEXING_MAX_BATCHSIZE, $journalId = null) {
-        // Retrieve a batch of "changed" articles.
+    function pushChangedSubmissions($batchSize = ALGOLIA_INDEXING_MAX_BATCHSIZE, $journalId = null) {
+        // Retrieve a batch of "changed" Submissions.
         import('lib.pkp.classes.db.DBResultRange');
         $range = new DBResultRange($batchSize);
-        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
-        $changedArticlesIterator = $submissionDao->getBySetting(
+        $submissionDao = DAORegistry::getDAO('SubmissionDAO'); /* @var $submissionDao SubmissionDAO */
+        $changedSubmissionsIterator = $submissionDao->getBySetting(
             'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_DIRTY, $journalId, $range
         );
         unset($range);
 
-        // Retrieve articles and overall count from the result set.
-        $changedArticles = $changedArticlesIterator->toArray();
-        $batchCount = count($changedArticles);
-        $totalCount = $changedArticlesIterator->getCount();
-        unset($changedArticlesIterator);
+        // Retrieve Submissions and overall count from the result set.
+        $changedSubmissions = $changedSubmissionsIterator->toArray();
+        $batchCount = count($changedSubmissions);
+        $totalCount = $changedSubmissionsIterator->getCount();
+        unset($changedSubmissionsIterator);
 
         $toDelete = array();
         $toAdd = array();
 
-        foreach($changedArticles as $indexedArticle) {
-            $indexedArticle->setData('algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN);
-            $submissionDao->updateLocaleFields($indexedArticle);
+        foreach($changedSubmissions as $indexedSubmission) {
+            $indexedSubmission->setData('algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN);
+            $submissionDao->updateLocaleFields($indexedSubmission);
             
-            $toDelete[] = $this->buildAlgoliaObjectDelete($indexedArticle);
-            $toAdd[] = $this->buildAlgoliaObjectAdd($indexedArticle);
+            $toDelete[] = $this->buildAlgoliaObjectDelete($indexedSubmission);
+            $toAdd[] = $this->buildAlgoliaObjectAdd($indexedSubmission);
         }
 
         if($journalId){
@@ -191,42 +191,42 @@ class AlgoliaService {
     }
 
     /**
-     * Deletes the given article from Algolia.
+     * Deletes the given Submission from Algolia.
      *
-     * @param $articleId integer The ID of the article to be deleted.
+     * @param $submissionId integer The ID of the Submission to be deleted.
      *
      * @return boolean true if successful, otherwise false.
      */
-    function deleteArticleFromIndex($articleId) {
-        if(!is_numeric($articleId)) {
+    function deleteSubmissionFromIndex($submissionId) {
+        if(!is_numeric($submissionId)) {
             assert(false);
             return;
         }
 
         $toDelete = array();
-        $toDelete[] = $this->buildAlgoliaObjectDelete($articleId);
+        $toDelete[] = $this->buildAlgoliaObjectDelete($submissionId);
         foreach($toDelete as $delete){
             $this->indexer->deleteByDistinctId($delete['distinctId']);
         }
     }
 
     /**
-     * Deletes all articles of a journal or of the
+     * Deletes all Submissions of a journal or of the
      * installation from Algolia.
      *
-     * @param $journalId integer If given, only articles
+     * @param $journalId integer If given, only Submissions
      *  from this journal will be deleted.
      * @return boolean true if successful, otherwise false.
      */
-    function deleteArticlesFromIndex($journalId = null) {
-        // Delete only articles from one journal if a
+    function deleteSubmissionsFromIndex($journalId = null) {
+        // Delete only Submissions from one journal if a
         // journal ID is given.
         $journalQuery = '';
         if (is_numeric($journalId)) {
             $journalQuery = ' AND journal_id:' . $this->_instId . '-' . $journalId;
         }
 
-        // Delete all articles of the installation (or journal).
+        // Delete all Submissions of the installation (or journal).
         $xml = '<query>inst_id:' . $this->_instId . $journalQuery . '</query>';
         return $this->_deleteFromIndex($xml);
     }
@@ -270,34 +270,34 @@ class AlgoliaService {
     }
 
     /**
-     * Check whether access to the given article
+     * Check whether access to the given Submission
      * is authorized to the requesting party (i.e. the
      * Solr server).
      *
-     * @param $article Article
+     * @param $Submission Submission
      * @return boolean True if authorized, otherwise false.
      */
-    function _isArticleAccessAuthorized($article) {
-        // Did we get a published article?
-        if (!is_a($article, 'PublishedArticle')) return false;
+    function _isSubmissionAccessAuthorized($Submission) {
+        // Did we get a published Submission?
+        if (!is_a($Submission, 'PublishedSubmission')) return false;
 
-        // Get the article's journal.
-        $journal = $this->_getJournal($article->getJournalId());
+        // Get the Submission's journal.
+        $journal = $this->_getJournal($Submission->getJournalId());
         if (!is_a($journal, 'Journal')) return false;
 
-        // Get the article's issue.
-        $issue = $this->_getIssue($article->getIssueId(), $journal->getId());
+        // Get the Submission's issue.
+        $issue = $this->_getIssue($Submission->getIssueId(), $journal->getId());
         if (!is_a($issue, 'Issue')) return false;
 
-        // Only index published articles.
-        if (!$issue->getPublished() || $article->getStatus() != STATUS_PUBLISHED) return false;
+        // Only index published Submissions.
+        if (!$issue->getPublished() || $Submission->getStatus() != STATUS_PUBLISHED) return false;
 
-        // Make sure the requesting party is authorized to access the article/issue.
+        // Make sure the requesting party is authorized to access the Submission/issue.
         import('classes.issue.IssueAction');
         $issueAction = new IssueAction();
         $subscriptionRequired = $issueAction->subscriptionRequired($issue, $journal);
         if ($subscriptionRequired) {
-            $isSubscribedDomain = $issueAction->subscribedDomain(Application::getRequest(), $journal, $issue->getId(), $article->getId());
+            $isSubscribedDomain = $issueAction->subscribedDomain(Application::getRequest(), $journal, $issue->getId(), $Submission->getId());
             if (!$isSubscribedDomain) return false;
         }
 
@@ -305,25 +305,25 @@ class AlgoliaService {
         return true;
     }
 
-    function buildAlgoliaObjectAdd($article){
-        // mark the article as "clean"
-        $submissionDao = DAORegistry::getDAO('ArticleDAO'); /* @var $submissionDao ArticleDAO */
+    function buildAlgoliaObjectAdd($Submission){
+        // mark the Submission as "clean"
+        $submissionDao = DAORegistry::getDAO('SubmissionDAO'); /* @var $submissionDao SubmissionDAO */
         $submissionDao->updateSetting(
-            $article->getId(), 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN, 'bool'
+            $Submission->getId(), 'algoliaIndexingState', ALGOLIA_INDEXINGSTATE_CLEAN, 'bool'
         );
 
         $baseData = array(
             "objectAction" => "addObject",
-            "distinctId" => $article->getId(),
+            "distinctId" => $Submission->getId(),
         );
 
         $objects = array();
 
-        $articleData = $this->mapAlgoliaFieldsToIndex($article);
-        foreach($articleData['body'] as $i => $chunks){
+        $SubmissionData = $this->mapAlgoliaFieldsToIndex($Submission);
+        foreach($SubmissionData['body'] as $i => $chunks){
             if(trim($chunks)){
                 $baseData['objectID'] = $baseData['distinctId'] . "_" . $i;
-                $chunkedData = $articleData;
+                $chunkedData = $SubmissionData;
                 $chunkedData['body'] = $chunks;
                 $chunkedData['order'] = $i + 1;
                 $objects[] = array_merge($baseData, $chunkedData);
@@ -333,17 +333,17 @@ class AlgoliaService {
         return $objects;
     }
 
-    function buildAlgoliaObjectDelete($articleOrArticleId){
-        if(!is_numeric($articleOrArticleId)) {
+    function buildAlgoliaObjectDelete($SubmissionOrSubmissionId){
+        if(!is_numeric($SubmissionOrSubmissionId)) {
             return array(
                 "objectAction" => "deleteObject",
-                "distinctId" => $articleOrArticleId->getId(),
+                "distinctId" => $SubmissionOrSubmissionId->getId(),
             );
         }
 
         return array(
             "objectAction" => "deleteObject",
-            "distinctId" => $articleOrArticleId,
+            "distinctId" => $SubmissionOrSubmissionId,
         );
     }
 
@@ -366,52 +366,52 @@ class AlgoliaService {
         return $fieldsToIndex;
     }
 
-    function mapAlgoliaFieldsToIndex($article){
+    function mapAlgoliaFieldsToIndex($Submission){
         $mappedFields = array();
 
         $fieldsToIndex = $this->getAlgoliaFieldsToIndex();
         foreach($fieldsToIndex as $field){
             switch($field){
                 case "title":
-                    $mappedFields[$field] = $this->formatTitle($article);
+                    $mappedFields[$field] = $this->formatTitle($Submission);
                     break;
 
                 case "abstract":
-                    $mappedFields[$field] = $this->formatAbstract($article);
+                    $mappedFields[$field] = $this->formatAbstract($Submission);
                     break;
 
                 case "discipline":
-                    $mappedFields[$field] = (array) $article->getDiscipline(null);
+                    $mappedFields[$field] = (array) $Submission->getDiscipline(null);
                     break;
 
                 case "subject":
-                    $mappedFields[$field] = (array) $article->getSubject(null);
+                    $mappedFields[$field] = (array) $Submission->getSubject(null);
                     break;
 
                 case "type":
-                    $mappedFields[$field] = $article->getType(null);
+                    $mappedFields[$field] = $Submission->getType(null);
                     break;
 
                 case "coverage":
-                    $mappedFields[$field] = (array) $article->getCoverage(null);
+                    $mappedFields[$field] = (array) $Submission->getCoverage(null);
                     break;
 
                 case "galleyFullText":
-                    $mappedFields[$field] = $this->getGalleyHTML($article);
+                    $mappedFields[$field] = $this->getGalleyHTML($Submission);
                     break;
 
                 case "authors":
-                    $mappedFields[$field] = $this->getAuthors($article);
+                    $mappedFields[$field] = $this->getAuthors($Submission);
                     break;
 
                 case "publicationDate":
-                    $mappedFields[$field] = strtotime($article->getDatePublished());
+                    $mappedFields[$field] = strtotime($Submission->getDatePublished());
                     break;
             }
         }
 
-        $mappedFields['section'] = $article->getSectionTitle();
-        $mappedFields['url'] = $this->formatUrl($article);
+        $mappedFields['section'] = $Submission->getSectionTitle();
+        $mappedFields['url'] = $this->formatUrl($Submission);
 
         // combine abstract and galleyFullText into body and unset them
         $mappedFields['body'] = array_merge($mappedFields['abstract'], $mappedFields['galleyFullText']);
@@ -421,47 +421,47 @@ class AlgoliaService {
         return $mappedFields;
     }
 
-    function formatPublicationDate($article, $custom = false){
+    function formatPublicationDate($Submission, $custom = false){
         if(!$custom){
-            return $article->getDatePublished();
+            return $Submission->getDatePublished();
         }else{
             // for example:
-            $publishedDate = date_create($article->getDatePublished());
+            $publishedDate = date_create($Submission->getDatePublished());
             return date_format($publishedDate, "F Y");
         }
     }
 
-    function formatUrl($article, $custom = false){
+    function formatUrl($Submission, $custom = false){
         $baseUrl = Config::getVar('general', 'base_url');
 
         if(!preg_match("#/index\.php#", $baseUrl)){
             $baseUrl .= "/index.php";
         }
 
-        $publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO');
-        $publishedArticle = $publishedArticleDao->getByArticleId($article->getId());
-        $sequence = $publishedArticle->getSequence();
+        $publishedSubmissionDao = DAORegistry::getDAO('PublishedSubmissionDAO');
+        $publishedSubmission = $publishedSubmissionDao->getBySubmissionId($Submission->getId());
+        $sequence = $publishedSubmission->getSequence();
 
         $issueDao = DAORegistry::getDAO('IssueDAO');
-        $issue = $issueDao->getById($publishedArticle->getIssueId());
+        $issue = $issueDao->getById($publishedSubmission->getIssueId());
         $volume = $issue->getData("volume");
         $number = $issue->getData("number");
 
         $journalDao = DAORegistry::getDAO('JournalDAO');
-        $journal = $journalDao->getById($article->getJournalId());
+        $journal = $journalDao->getById($Submission->getJournalId());
         $acronym = $journal->getLocalizedAcronym();
 
         if(!$custom){
-            return $baseUrl . "/" . strtolower($acronym) . "/article/view/" . $article->getId();
+            return $baseUrl . "/" . strtolower($acronym) . "/Submission/view/" . $Submission->getId();
         }else{
             // as an example...format your custom url how you'd like
-            return $baseUrl . "/" . strtolower($acronym) . "/article/view/" . $acronym . $volume . "." . $number . "." . str_pad($number, 2, "0", STR_PAD_LEFT);
+            return $baseUrl . "/" . strtolower($acronym) . "/Submission/view/" . $acronym . $volume . "." . $number . "." . str_pad($number, 2, "0", STR_PAD_LEFT);
         }
     }
 
-    function getAuthors($article){
+    function getAuthors($Submission){
         $authorText = array();
-        $authors = $article->getAuthors();
+        $authors = $Submission->getAuthors();
         $authorCount = count($authors);
         for ($i = 0, $count = $authorCount; $i < $count; $i++) {
             //
@@ -494,17 +494,17 @@ class AlgoliaService {
         return implode(", ", $authorText);
     }
 
-    function formatAbstract($article){
-        return $this->chunkContent($article->getAbstract($article->getLocale()));
+    function formatAbstract($Submission){
+        return $this->chunkContent($Submission->getAbstract($Submission->getLocale()));
     }
 
-    function getGalleyHTML($article){
-        $publishedArticleDao = DAORegistry::getDAO('PublishedArticleDAO');
-        $publishedArticle = $publishedArticleDao->getByArticleId($article->getId());
+    function getGalleyHTML($Submission){
+        $publishedSubmissionDao = DAORegistry::getDAO('PublishedSubmissionDAO');
+        $publishedSubmission = $publishedSubmissionDao->getBySubmissionId($Submission->getId());
 
         $contents = "";
 
-        $galleys = $publishedArticle->getGalleys();
+        $galleys = $publishedSubmission->getGalleys();
         foreach($galleys as $galley){
             if($galley->getFileType() == "text/html"){
                 $submissionFile = $galley->getFile();
@@ -536,8 +536,8 @@ class AlgoliaService {
         return $data;
     }
 
-    function formatTitle($article){
-        $title = $article->getTitle(null);
+    function formatTitle($Submission){
+        $title = $Submission->getTitle(null);
 
         return preg_replace("/<.*?>/", "", $title);
     }
